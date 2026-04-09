@@ -27,31 +27,6 @@
       font-weight: 400;
     }
 
-    /* ── Auth Screen ── */
-    #auth-screen {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .signin-container {
-      text-align: center;
-      padding: 48px 40px;
-      border: 1px solid var(--border);
-      background: #fff;
-      max-width: 400px;
-      width: 100%;
-    }
-    .signin-container .eyebrow {
-      margin-bottom: 12px;
-    }
-    .signin-container h2 {
-      font-size: 20px;
-      font-weight: 500;
-      color: var(--navy);
-      margin-bottom: 28px;
-    }
-
     /* ── Typography ── */
     .eyebrow {
       font-size: 11px;
@@ -86,26 +61,7 @@
       align-items: flex-start;
       gap: 20px;
     }
-    .auth-info {
-      text-align: right;
-      font-size: 12px;
-      color: var(--slate);
-    }
-    .auth-info span {
-      display: block;
-      margin-bottom: 6px;
-    }
-    .btn-signout {
-      background: none;
-      border: 1px solid var(--border);
-      padding: 4px 10px;
-      font-size: 11px;
-      color: var(--slate);
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .btn-signout:hover { border-color: var(--navy); color: var(--navy); }
-    .days-box {
+.days-box {
       background: var(--navy);
       color: #fff;
       padding: 12px 20px;
@@ -416,48 +372,18 @@
       font-size: 13px;
       margin-top: 12px;
     }
-
-    /* ── Sign-in button ── */
-    .btn-signin {
-      background: var(--navy);
-      color: #fff;
-      border: none;
-      padding: 12px 32px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      font-family: inherit;
-      width: 100%;
-    }
-    .btn-signin:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
 
-  <!-- Auth Screen -->
-  <div id="auth-screen">
-    <div class="signin-container">
-      <div class="eyebrow">AD76 · Primary 2026</div>
-      <h2>Digital Budget Tracker</h2>
-      <div id="signin-btn-container">
-        <button class="btn-signin" onclick="requestToken()">Sign in with Google</button>
-      </div>
-      <div id="auth-error" hidden style="margin-top:16px;padding:10px 14px;background:var(--red-bg);color:var(--red-text);font-size:13px;border-radius:4px;"></div>
-    </div>
-  </div>
-
   <!-- Main App -->
-  <div id="app" hidden>
+  <div id="app">
     <header class="page-header">
       <div class="header-left">
         <div class="eyebrow">AD76 · Primary 2026</div>
         <h1>Dina Nina Martinez-Rutherford · Digital spend</h1>
       </div>
       <div class="header-right">
-        <div class="auth-info">
-          <span id="user-email-display"></span>
-          <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
-        </div>
         <div class="days-box">
           <div class="days-number" id="days-count">—</div>
           <div class="days-label">Days to<br>Election</div>
@@ -484,11 +410,9 @@
     </main>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     // ── Constants ──
-    const CLIENT_ID = '1051010818536-3p8sodu9koqspik8cpkq3four79j19rj.apps.googleusercontent.com';
-    const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
+const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
     const SHEET_NAME = 'Tracker';
     const ELECTION_DATE = new Date(2026, 7, 11);   // Aug 11 2026
     const CAMPAIGN_START = new Date(2026, 4, 26);  // May 26 2026
@@ -496,9 +420,6 @@
     const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SPREADSHEET_ID;
 
     // ── State ──
-    let tokenClient;
-    let accessToken = null;
-    let userEmail = null;
     let dataRows = [];
     let totalsRow = null;
     let currentTab = 'summary';
@@ -566,86 +487,13 @@
       return '<span class="status-badge badge-green">On Pace</span>';
     }
 
-    // ── Auth ──
-    function showAuthError(msg) {
-      const el = document.getElementById('auth-error');
-      if (!el) return;
-      if (msg) { el.textContent = msg; el.hidden = false; }
-      else      { el.textContent = ''; el.hidden = true;  }
-    }
-
-    function initAuth() {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email',
-        callback: handleTokenResponse,
-      });
-    }
-
-    function requestToken() {
-      showAuthError(null);
-      if (tokenClient) {
-        tokenClient.requestAccessToken({ prompt: '' });
-      } else {
-        showAuthError('Google Sign-In is not available. Your browser may be blocking the sign-in script (e.g. an ad blocker). Please disable it for this page and reload.');
-      }
-    }
-
-    function handleTokenResponse(resp) {
-      if (resp.error) {
-        console.error('Token error:', resp);
-        const friendly = {
-          'access_denied':            'Access was denied. Please try again and click "Allow".',
-          'immediate_failed':         'Silent sign-in failed. Click the button to sign in.',
-          'popup_closed_by_user':     'The sign-in window was closed. Please try again.',
-          'popup_blocked_by_browser': 'Your browser blocked the sign-in popup. Allow popups for this page and try again.',
-        };
-        showAuthError(friendly[resp.error] || ('Sign-in failed: ' + resp.error));
-        return;
-      }
-      showAuthError(null);
-      accessToken = resp.access_token;
-      fetchUserInfo().then(() => {
-        document.getElementById('auth-screen').hidden = true;
-        document.getElementById('app').hidden = false;
-        loadData();
-      });
-    }
-
-    async function fetchUserInfo() {
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: 'Bearer ' + accessToken }
-        });
-        const data = await res.json();
-        userEmail = data.email || '';
-        document.getElementById('user-email-display').textContent = 'Signed in as ' + userEmail;
-      } catch (e) {
-        console.error('fetchUserInfo error', e);
-      }
-    }
-
-    function handleSignOut() {
-      if (accessToken) {
-        google.accounts.oauth2.revoke(accessToken, () => {});
-      }
-      accessToken = null;
-      userEmail = null;
-      dataRows = [];
-      totalsRow = null;
-      document.getElementById('app').hidden = true;
-      document.getElementById('auth-screen').hidden = false;
-      document.getElementById('user-email-display').textContent = '';
-    }
-
     // ── Data ──
     async function loadData() {
       document.getElementById('error-banner').hidden = true;
       try {
-        const headers = { Authorization: 'Bearer ' + accessToken };
         const [mainRes, totalsRes] = await Promise.all([
-          fetch(SHEETS_BASE + '/values/Tracker!A3:T80', { headers }),
-          fetch(SHEETS_BASE + '/values/Tracker!M82:T82', { headers }),
+          fetch(SHEETS_BASE + '/values/Tracker!A3:T80'),
+          fetch(SHEETS_BASE + '/values/Tracker!M82:T82'),
         ]);
         if (!mainRes.ok) throw new Error('Main fetch failed: ' + mainRes.status);
         if (!totalsRes.ok) throw new Error('Totals fetch failed: ' + totalsRes.status);
@@ -802,9 +650,6 @@
 
     function renderHeader() {
       document.getElementById('days-count').textContent = getDaysToElection();
-      if (userEmail) {
-        document.getElementById('user-email-display').textContent = 'Signed in as ' + userEmail;
-      }
     }
 
     function renderKPIs() {
@@ -1079,7 +924,6 @@
       const res = await fetch(url, {
         method: 'PUT',
         headers: {
-          Authorization: 'Bearer ' + accessToken,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ values: [[googleVal, metaVal]] }),
@@ -1093,27 +937,7 @@
 
     // ── Init ──
     window.onload = function () {
-      // Redirect-flow fallback: GSI appends token to hash when popup is blocked
-      if (window.location.hash) {
-        const params = new URLSearchParams(window.location.hash.slice(1));
-        const hashToken = params.get('access_token');
-        if (hashToken) {
-          history.replaceState(null, '', window.location.pathname + window.location.search);
-          handleTokenResponse({
-            access_token: hashToken,
-            token_type:   params.get('token_type') || 'Bearer',
-            expires_in:   params.get('expires_in'),
-            scope:        params.get('scope'),
-          });
-        }
-      }
-      // Normal popup flow
-      const waitForGsi = setInterval(() => {
-        if (window.google && window.google.accounts) {
-          clearInterval(waitForGsi);
-          initAuth();
-        }
-      }, 100);
+      loadData();
     };
   </script>
 </body>
