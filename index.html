@@ -474,6 +474,15 @@
     let accessToken = null;
 
     // ── Utility Functions ──
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function sum(arr) {
       return arr.reduce((a, b) => a + (parseFloat(b) || 0), 0);
     }
@@ -741,8 +750,8 @@
       return dataRows.filter(r => r.weeklyBudget !== null && !r.isPreCampaign);
     }
 
-    function getPreCampaignRow() {
-      return dataRows.find(r => r.isPreCampaign) || null;
+    function getPreCampaignRows() {
+      return dataRows.filter(r => r.isPreCampaign && r.weeklyBudget !== null);
     }
 
     function isCurrentWeek(weekStartRow) {
@@ -875,23 +884,22 @@
     function renderWeeklyTable() {
       const weekRows = getWeekRows();
       const expectedPct = getExpectedPct();
-      const preCampaignRow = getPreCampaignRow();
+      const preCampaignRows = getPreCampaignRows();
 
-      let preCampaignHtml = '';
-      if (preCampaignRow && preCampaignRow.weeklyBudget !== null) {
-        const budget = preCampaignRow.weeklyBudget || 0;
-        const actual = preCampaignRow.weeklyActual || 0;
-        const diff = preCampaignRow.weeklyDiff !== null ? preCampaignRow.weeklyDiff : (actual - budget);
+      const preCampaignHtml = preCampaignRows.map(row => {
+        const budget = row.weeklyBudget || 0;
+        const actual = row.weeklyActual || 0;
+        const diff = row.weeklyDiff !== null ? row.weeklyDiff : (actual - budget);
         const diffClass = diff >= 0 ? 'diff-positive' : 'diff-negative';
         const diffSign = diff > 0 ? '+' : '';
-        preCampaignHtml = `<tr class="pre-campaign-row">
-          <td>${preCampaignRow.preLabel || 'Before Digital Start'}</td>
+        return `<tr class="pre-campaign-row">
+          <td>${escapeHtml(row.preLabel || 'Before Digital Start')}</td>
           <td class="text-right">${formatCurrency(budget)}</td>
           <td class="text-right">${formatCurrency(actual)}</td>
           <td class="text-right ${diffClass}">${diffSign}${formatCurrency(diff)}</td>
           <td><span class="status-badge badge-gray">Pre-Campaign</span></td>
         </tr>`;
-      }
+      }).join('');
 
       if (weekRows.length === 0 && !preCampaignHtml) {
         return '<tr><td colspan="5" style="color:var(--slate2);font-style:italic;padding:20px 12px">No weekly data available</td></tr>';
