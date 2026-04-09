@@ -267,6 +267,8 @@
     .badge-green { background: var(--green-bg); color: var(--green-text); }
     .badge-amber { background: var(--amber-bg); color: var(--amber-text); }
     .badge-red { background: var(--red-bg); color: var(--red-text); }
+    .badge-gray { background: #e5e7eb; color: #374151; }
+    .pre-campaign-row td { color: var(--slate); font-style: italic; background: #f5f5f2; }
 
     /* ── Tables ── */
     table {
@@ -634,9 +636,14 @@
     function processSheetData(mainValues, totalsValues) {
       dataRows = mainValues.map((row, i) => {
         const get = (idx) => row[idx] !== undefined ? row[idx] : '';
+        const rawDate = get(0);
+        const parsedDate = parseSheetDate(rawDate);
+        const isPreCampaign = !parsedDate || isNaN(parsedDate.getTime());
         return {
           sheetRowNum: i + 3,
-          date: parseSheetDate(get(0)),
+          date: isPreCampaign ? null : parsedDate,
+          preLabel: isPreCampaign ? rawDate : null,
+          isPreCampaign,
           gDisplayBudget: parseFloatOrZero(get(1)),
           gSearchBudget: parseFloatOrZero(get(2)),
           gActual: parseFloat2(get(3)),
@@ -672,12 +679,12 @@
 
     // ── Computed Values ──
     function getTotalBudget() {
-      return sum(dataRows.map(r => r.dailyTotalBudget));
+      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.dailyTotalBudget));
     }
 
     function getSpentToDate() {
       return sum(dataRows
-        .filter(r => r.gActual !== null || r.metaActual !== null)
+        .filter(r => !r.isPreCampaign && (r.gActual !== null || r.metaActual !== null))
         .map(r => r.dailyActual));
     }
 
@@ -731,7 +738,11 @@
     }
 
     function getWeekRows() {
-      return dataRows.filter(r => r.weeklyBudget !== null);
+      return dataRows.filter(r => r.weeklyBudget !== null && !r.isPreCampaign);
+    }
+
+    function getPreCampaignRow() {
+      return dataRows.find(r => r.isPreCampaign) || null;
     }
 
     function isCurrentWeek(weekStartRow) {
@@ -864,10 +875,29 @@
     function renderWeeklyTable() {
       const weekRows = getWeekRows();
       const expectedPct = getExpectedPct();
-      if (weekRows.length === 0) {
+      const preCampaignRow = getPreCampaignRow();
+
+      let preCampaignHtml = '';
+      if (preCampaignRow && preCampaignRow.weeklyBudget !== null) {
+        const budget = preCampaignRow.weeklyBudget || 0;
+        const actual = preCampaignRow.weeklyActual || 0;
+        const diff = preCampaignRow.weeklyDiff !== null ? preCampaignRow.weeklyDiff : (actual - budget);
+        const diffClass = diff >= 0 ? 'diff-positive' : 'diff-negative';
+        const diffSign = diff > 0 ? '+' : '';
+        preCampaignHtml = `<tr class="pre-campaign-row">
+          <td>${preCampaignRow.preLabel || 'Before Digital Start'}</td>
+          <td class="text-right">${formatCurrency(budget)}</td>
+          <td class="text-right">${formatCurrency(actual)}</td>
+          <td class="text-right ${diffClass}">${diffSign}${formatCurrency(diff)}</td>
+          <td><span class="status-badge badge-gray">Pre-Campaign</span></td>
+        </tr>`;
+      }
+
+      if (weekRows.length === 0 && !preCampaignHtml) {
         return '<tr><td colspan="5" style="color:var(--slate2);font-style:italic;padding:20px 12px">No weekly data available</td></tr>';
       }
-      return weekRows.map(row => {
+
+      const regularRows = weekRows.map(row => {
         const budget = row.weeklyBudget || 0;
         const actual = row.weeklyActual || 0;
         const diff = row.weeklyDiff !== null ? row.weeklyDiff : (actual - budget);
@@ -884,6 +914,8 @@
           <td>${badge}</td>
         </tr>`;
       }).join('');
+
+      return preCampaignHtml + regularRows;
     }
 
     function renderChannelTable(channels) {
