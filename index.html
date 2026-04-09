@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AD76 · Digital Budget Tracker</title>
+  <style>
+    :root {
+      --bg: #f7f6f1;
+      --navy: #1a2744;
+      --text: #111827;
+      --slate: #4a5568;
+      --slate2: #718096;
+      --border: rgba(26,39,68,0.12);
+      --green-bg: #dcfce7;
+      --green-text: #166534;
+      --amber-bg: #fef3c7;
+      --amber-text: #92400e;
+      --red-bg: #fee2e2;
+      --red-text: #991b1b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    /* ── Auth Screen ── */
+    #auth-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .signin-container {
+      text-align: center;
+      padding: 48px 40px;
+      border: 1px solid var(--border);
+      background: #fff;
+      max-width: 400px;
+      width: 100%;
+    }
+    .signin-container .eyebrow {
+      margin-bottom: 12px;
+    }
+    .signin-container h2 {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--navy);
+      margin-bottom: 28px;
+    }
+
+    /* ── Typography ── */
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      font-weight: 400;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--navy);
+    }
+
+    /* ── App layout ── */
+    #app {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 20px;
+    }
+    .header-left .eyebrow { margin-bottom: 6px; }
+    .header-right {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .auth-info {
+      text-align: right;
+      font-size: 12px;
+      color: var(--slate);
+    }
+    .auth-info span {
+      display: block;
+      margin-bottom: 6px;
+    }
+    .btn-signout {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--slate);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-signout:hover { border-color: var(--navy); color: var(--navy); }
+    .days-box {
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 20px;
+      text-align: center;
+    }
+    .days-number {
+      font-size: 40px;
+      font-weight: 500;
+      line-height: 1;
+    }
+    .days-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-top: 2px;
+    }
+    .header-rule {
+      border: none;
+      border-top: 2px solid var(--navy);
+      margin-bottom: 0;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .tab {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--slate);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      font-weight: 400;
+      font-family: inherit;
+    }
+    .tab.active {
+      color: var(--navy);
+      border-bottom-color: var(--navy);
+      font-weight: 500;
+    }
+
+    /* ── Error banner ── */
+    #error-banner {
+      background: var(--red-bg);
+      color: var(--red-text);
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-retry {
+      background: none;
+      border: 1px solid var(--red-text);
+      color: var(--red-text);
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* ── Section headers ── */
+    .section-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      margin-bottom: 16px;
+    }
+    .section-gap { margin-bottom: 32px; }
+
+    /* ── KPI Grid ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border: 1px solid var(--border);
+    }
+    .kpi-card {
+      padding: 20px;
+      border-right: 1px solid var(--border);
+    }
+    .kpi-card:last-child { border-right: none; }
+    .kpi-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 500;
+      color: var(--navy);
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--slate2);
+      margin-top: 4px;
+    }
+
+    /* ── Burn bar ── */
+    .burn-container { padding: 8px 0 4px; }
+    .burn-track {
+      height: 10px;
+      background: #e8e6df;
+      border-radius: 2px;
+      position: relative;
+      overflow: visible;
+      margin-top: 28px;
+    }
+    .burn-fill {
+      height: 100%;
+      background: var(--navy);
+      border-radius: 2px;
+    }
+    .burn-tick {
+      position: absolute;
+      top: -6px;
+      width: 2px;
+      background: var(--slate);
+      height: 22px;
+    }
+    .burn-tick-label {
+      position: absolute;
+      top: -20px;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--slate);
+      white-space: nowrap;
+      transform: translateX(-50%);
+    }
+    .date-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--slate2);
+      margin-top: 6px;
+    }
+    .burn-status {
+      font-size: 12px;
+      color: var(--slate);
+      margin-top: 8px;
+      text-align: right;
+    }
+
+    /* ── Channel rows ── */
+    .channel-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .channel-row:first-child { border-top: 1px solid var(--border); }
+    .channel-name {
+      width: 160px;
+      font-size: 13px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .channel-bar-wrap { flex: 1; }
+    .channel-bar-track {
+      height: 8px;
+      background: #e8e6df;
+      border-radius: 2px;
+    }
+    .channel-bar-fill {
+      height: 100%;
+      background: var(--navy);
+      border-radius: 2px;
+    }
+    .channel-nums {
+      width: 160px;
+      font-size: 12px;
+      color: var(--slate);
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .channel-badge {
+      width: 80px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .status-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      display: inline-block;
+    }
+    .badge-green { background: var(--green-bg); color: var(--green-text); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber-text); }
+    .badge-red { background: var(--red-bg); color: var(--red-text); }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      font-weight: 400;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    tr.current-week td { background: rgba(26,39,68,0.04); }
+    tr.totals-row td {
+      font-weight: 500;
+      border-top: 2px solid var(--border);
+      border-bottom: none;
+    }
+    .diff-positive { color: var(--red-text); }
+    .diff-negative { color: var(--green-text); }
+    .text-right { text-align: right; }
+
+    /* ── Log form ── */
+    .log-section {
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .log-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      margin-bottom: 12px;
+    }
+    .form-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .form-field { flex: 1; }
+    label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--slate);
+      display: block;
+      margin-bottom: 4px;
+    }
+    input[type=text],
+    input[type=number],
+    input[type=date] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+    input[type=text]:focus,
+    input[type=number]:focus,
+    input[type=date]:focus {
+      border-color: var(--navy);
+    }
+    .btn-save {
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-save:hover { opacity: 0.9; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-note {
+      font-size: 12px;
+      color: var(--slate2);
+      margin-top: 8px;
+      font-style: italic;
+    }
+    .msg-success {
+      color: var(--green-text);
+      background: var(--green-bg);
+      padding: 8px 12px;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .msg-error {
+      color: var(--red-text);
+      background: var(--red-bg);
+      padding: 8px 12px;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    /* ── Sign-in button ── */
+    .btn-signin {
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      width: 100%;
+    }
+    .btn-signin:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+  <!-- Auth Screen -->
+  <div id="auth-screen">
+    <div class="signin-container">
+      <div class="eyebrow">AD76 · Primary 2026</div>
+      <h2>Digital Budget Tracker</h2>
+      <div id="signin-btn-container">
+        <button class="btn-signin" onclick="requestToken()">Sign in with Google</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" hidden>
+    <header class="page-header">
+      <div class="header-left">
+        <div class="eyebrow">AD76 · Primary 2026</div>
+        <h1>Dina Nina Martinez-Rutherford · Digital spend</h1>
+      </div>
+      <div class="header-right">
+        <div class="auth-info">
+          <span id="user-email-display"></span>
+          <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
+        </div>
+        <div class="days-box">
+          <div class="days-number" id="days-count">—</div>
+          <div class="days-label">Days to<br>Election</div>
+        </div>
+      </div>
+    </header>
+    <hr class="header-rule">
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="summary" onclick="switchTab('summary')">Summary</button>
+      <button class="tab" data-tab="detail" onclick="switchTab('detail')">Detail</button>
+      <button class="tab" data-tab="log" onclick="switchTab('log')">Log Spend</button>
+    </nav>
+
+    <div id="error-banner" hidden>
+      <span id="error-msg">Failed to load data from Google Sheets.</span>
+      <button class="btn-retry" onclick="loadData()">Retry</button>
+    </div>
+
+    <main>
+      <section id="tab-summary"></section>
+      <section id="tab-detail" hidden></section>
+      <section id="tab-log" hidden></section>
+    </main>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    // ── Constants ──
+    const CLIENT_ID = '1051010818536-3p8sodu9koqspik8cpkq3four79j19rj.apps.googleusercontent.com';
+    const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
+    const SHEET_NAME = 'Tracker';
+    const ELECTION_DATE = new Date(2026, 7, 11);   // Aug 11 2026
+    const CAMPAIGN_START = new Date(2026, 4, 26);  // May 26 2026
+    const DSPOLITICAL_BUDGET = 2500;
+    const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SPREADSHEET_ID;
+
+    // ── State ──
+    let tokenClient;
+    let accessToken = null;
+    let userEmail = null;
+    let dataRows = [];
+    let totalsRow = null;
+    let currentTab = 'summary';
+
+    // ── Utility Functions ──
+    function sum(arr) {
+      return arr.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+    }
+
+    function formatCurrency(n) {
+      if (n === null || n === undefined || isNaN(n)) return '$0';
+      return '$' + Math.round(n).toLocaleString('en-US');
+    }
+
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function formatDate(d) {
+      if (!d) return '';
+      return MONTHS[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function formatWeekRange(startDate) {
+      const end = new Date(startDate);
+      end.setDate(end.getDate() + 6);
+      const s = MONTHS[startDate.getMonth()] + ' ' + startDate.getDate();
+      const e = startDate.getMonth() === end.getMonth()
+        ? '' + end.getDate()
+        : MONTHS[end.getMonth()] + ' ' + end.getDate();
+      return s + '\u2013' + e;
+    }
+
+    function parseSheetDate(str) {
+      if (!str) return null;
+      if (str.includes('/')) {
+        const [m, d, y] = str.split('/').map(Number);
+        return new Date(y, m - 1, d);
+      }
+      return new Date(str);
+    }
+
+    function sameDay(a, b) {
+      if (!a || !b) return false;
+      return a.getFullYear() === b.getFullYear() &&
+             a.getMonth() === b.getMonth() &&
+             a.getDate() === b.getDate();
+    }
+
+    function diffDays(a, b) {
+      return Math.floor((b - a) / 86400000);
+    }
+
+    function getDaysToElection() {
+      const today = new Date(); today.setHours(0,0,0,0);
+      return Math.max(0, diffDays(today, ELECTION_DATE));
+    }
+
+    function getCampaignTotalDays() {
+      return diffDays(CAMPAIGN_START, ELECTION_DATE);
+    }
+
+    function getStatusBadge(actualPct, expectedPct) {
+      const diff = actualPct - expectedPct;
+      if (diff > 8) return '<span class="status-badge badge-red">Over</span>';
+      if (diff < -8) return '<span class="status-badge badge-green">Banking</span>';
+      return '<span class="status-badge badge-green">On Pace</span>';
+    }
+
+    // ── Auth ──
+    function initAuth() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email',
+        callback: handleTokenResponse,
+      });
+    }
+
+    function requestToken() {
+      if (tokenClient) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      }
+    }
+
+    function handleTokenResponse(resp) {
+      if (resp.error) {
+        console.error('Token error:', resp);
+        return;
+      }
+      accessToken = resp.access_token;
+      fetchUserInfo().then(() => {
+        document.getElementById('auth-screen').hidden = true;
+        document.getElementById('app').hidden = false;
+        loadData();
+      });
+    }
+
+    async function fetchUserInfo() {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + accessToken }
+        });
+        const data = await res.json();
+        userEmail = data.email || '';
+        document.getElementById('user-email-display').textContent = 'Signed in as ' + userEmail;
+      } catch (e) {
+        console.error('fetchUserInfo error', e);
+      }
+    }
+
+    function handleSignOut() {
+      if (accessToken) {
+        google.accounts.oauth2.revoke(accessToken, () => {});
+      }
+      accessToken = null;
+      userEmail = null;
+      dataRows = [];
+      totalsRow = null;
+      document.getElementById('app').hidden = true;
+      document.getElementById('auth-screen').hidden = false;
+      document.getElementById('user-email-display').textContent = '';
+    }
+
+    // ── Data ──
+    async function loadData() {
+      document.getElementById('error-banner').hidden = true;
+      try {
+        const headers = { Authorization: 'Bearer ' + accessToken };
+        const [mainRes, totalsRes] = await Promise.all([
+          fetch(SHEETS_BASE + '/values/Tracker!A3:T80', { headers }),
+          fetch(SHEETS_BASE + '/values/Tracker!M82:T82', { headers }),
+        ]);
+        if (!mainRes.ok) throw new Error('Main fetch failed: ' + mainRes.status);
+        if (!totalsRes.ok) throw new Error('Totals fetch failed: ' + totalsRes.status);
+        const mainJson = await mainRes.json();
+        const totalsJson = await totalsRes.json();
+        processSheetData(mainJson.values || [], totalsJson.values || []);
+        renderAll();
+      } catch (e) {
+        console.error('loadData error', e);
+        document.getElementById('error-msg').textContent = 'Failed to load data: ' + e.message;
+        document.getElementById('error-banner').hidden = false;
+      }
+    }
+
+    function parseFloat2(val) {
+      if (val === undefined || val === null || val === '') return null;
+      const s = String(val).replace(/[$,]/g, '');
+      const n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    }
+
+    function parseFloatOrZero(val) {
+      const n = parseFloat2(val);
+      return n === null ? 0 : n;
+    }
+
+    function processSheetData(mainValues, totalsValues) {
+      dataRows = mainValues.map((row, i) => {
+        const get = (idx) => row[idx] !== undefined ? row[idx] : '';
+        return {
+          sheetRowNum: i + 3,
+          date: parseSheetDate(get(0)),
+          gDisplayBudget: parseFloatOrZero(get(1)),
+          gSearchBudget: parseFloatOrZero(get(2)),
+          gActual: parseFloat2(get(3)),
+          metaActual: parseFloat2(get(4)),
+          metaDailyBudget: parseFloatOrZero(get(7)),
+          dailyTotalBudget: parseFloatOrZero(get(12)),
+          dailyActual: parseFloatOrZero(get(13)),
+          runningBudget: parseFloatOrZero(get(14)),
+          weeklyBudget: parseFloat2(get(16)),
+          weeklyActual: parseFloat2(get(17)),
+          weeklyDiff: parseFloat2(get(19)),
+        };
+      });
+
+      if (totalsValues && totalsValues[0]) {
+        const t = totalsValues[0];
+        const get = (idx) => t[idx] !== undefined ? t[idx] : '';
+        totalsRow = {
+          dailyTotalBudget: parseFloatOrZero(get(0)),
+          dailyActual: parseFloatOrZero(get(1)),
+          runningBudget: parseFloatOrZero(get(2)),
+          weeklyBudget: parseFloat2(get(4)),
+          weeklyActual: parseFloat2(get(5)),
+          weeklyDiff: parseFloat2(get(7)),
+        };
+      }
+    }
+
+    function findRowForDate(dateInputValue) {
+      const target = new Date(dateInputValue + 'T00:00:00');
+      return dataRows.find(r => r.date && sameDay(r.date, target)) || null;
+    }
+
+    // ── Computed Values ──
+    function getTotalBudget() {
+      return sum(dataRows.map(r => r.dailyTotalBudget));
+    }
+
+    function getSpentToDate() {
+      return sum(dataRows
+        .filter(r => r.gActual !== null || r.metaActual !== null)
+        .map(r => r.dailyActual));
+    }
+
+    function getGoogleActual() {
+      let last = 0;
+      for (const r of dataRows) {
+        if (r.gActual !== null) last = r.gActual;
+      }
+      return last;
+    }
+
+    function getMetaActual() {
+      let last = 0;
+      for (const r of dataRows) {
+        if (r.metaActual !== null) last = r.metaActual;
+      }
+      return last;
+    }
+
+    function getGDisplayBudget() {
+      return sum(dataRows.map(r => r.gDisplayBudget));
+    }
+
+    function getGSearchBudget() {
+      return sum(dataRows.map(r => r.gSearchBudget));
+    }
+
+    function getMetaBudget() {
+      return sum(dataRows.map(r => r.metaDailyBudget));
+    }
+
+    function getExpectedPct() {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const daysElapsed = Math.max(0, diffDays(CAMPAIGN_START, today));
+      const totalDays = getCampaignTotalDays();
+      return totalDays > 0 ? Math.min(100, daysElapsed / totalDays * 100) : 0;
+    }
+
+    function getChannels() {
+      const gActual = getGoogleActual();
+      const gDspBudget = getGDisplayBudget();
+      const gSrchBudget = getGSearchBudget();
+      const gTotal = gDspBudget + gSrchBudget;
+      const ratio = gTotal > 0 ? gDspBudget / gTotal : 0.5;
+      return [
+        { name: 'Google Display',    budget: gDspBudget,          actual: gActual * ratio },
+        { name: 'Google Search',     budget: gSrchBudget,         actual: gActual * (1 - ratio) },
+        { name: 'Meta',              budget: getMetaBudget(),      actual: getMetaActual() },
+        { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: 0 },
+      ];
+    }
+
+    function getWeekRows() {
+      return dataRows.filter(r => r.weeklyBudget !== null);
+    }
+
+    function isCurrentWeek(weekStartRow) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const end = new Date(weekStartRow.date); end.setDate(end.getDate() + 6);
+      return today >= weekStartRow.date && today <= end;
+    }
+
+    // ── Tab Switching ──
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      document.querySelectorAll('main section').forEach(sec => {
+        sec.hidden = sec.id !== 'tab-' + tab;
+      });
+    }
+
+    // ── Render ──
+    function renderAll() {
+      renderHeader();
+      renderSummary();
+      renderDetail();
+      renderLog();
+    }
+
+    function renderHeader() {
+      document.getElementById('days-count').textContent = getDaysToElection();
+      if (userEmail) {
+        document.getElementById('user-email-display').textContent = 'Signed in as ' + userEmail;
+      }
+    }
+
+    function renderKPIs() {
+      const totalBudget = getTotalBudget();
+      const spent = getSpentToDate();
+      const remaining = totalBudget - spent;
+      const expectedPct = getExpectedPct();
+      const actualPct = totalBudget > 0 ? spent / totalBudget * 100 : 0;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const daysElapsed = Math.max(0, diffDays(CAMPAIGN_START, today));
+      const totalDays = getCampaignTotalDays();
+
+      return `
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Budget</div>
+            <div class="kpi-value">${formatCurrency(totalBudget)}</div>
+            <div class="kpi-sub">${totalDays}-day campaign</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Spent to Date</div>
+            <div class="kpi-value">${formatCurrency(spent)}</div>
+            <div class="kpi-sub">${actualPct.toFixed(1)}% of budget</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Remaining</div>
+            <div class="kpi-value">${formatCurrency(remaining)}</div>
+            <div class="kpi-sub">${(100 - actualPct).toFixed(1)}% unspent</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Campaign Progress</div>
+            <div class="kpi-value">${expectedPct.toFixed(1)}%</div>
+            <div class="kpi-sub">Day ${daysElapsed} of ${totalDays}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderBurnBar() {
+      const totalBudget = getTotalBudget();
+      const spent = getSpentToDate();
+      const actualPct = totalBudget > 0 ? Math.min(100, spent / totalBudget * 100) : 0;
+      const expectedPct = Math.min(100, getExpectedPct());
+      const bankOrOver = spent - (totalBudget * expectedPct / 100);
+      const sign = bankOrOver >= 0 ? '+' : '';
+      const label = bankOrOver >= 0
+        ? sign + formatCurrency(bankOrOver) + ' ahead of pace'
+        : formatCurrency(Math.abs(bankOrOver)) + ' under pace (banking)';
+
+      return `
+        <div class="burn-container">
+          <div class="burn-track">
+            <div class="burn-fill" style="width:${actualPct}%"></div>
+            <div class="burn-tick" style="left:${expectedPct}%">
+              <div class="burn-tick-label" style="left:0">Expected</div>
+            </div>
+          </div>
+          <div class="date-labels">
+            <span>${formatDate(CAMPAIGN_START)}</span>
+            <span>${formatDate(ELECTION_DATE)}</span>
+          </div>
+          <div class="burn-status">${label}</div>
+        </div>`;
+    }
+
+    function renderChannelPacing(channels) {
+      const expectedPct = getExpectedPct();
+      return channels.map(ch => {
+        const pct = ch.budget > 0 ? Math.min(100, ch.actual / ch.budget * 100) : 0;
+        const badge = getStatusBadge(pct, expectedPct);
+        return `
+          <div class="channel-row">
+            <div class="channel-name">${ch.name}</div>
+            <div class="channel-bar-wrap">
+              <div class="channel-bar-track">
+                <div class="channel-bar-fill" style="width:${pct}%"></div>
+              </div>
+            </div>
+            <div class="channel-nums">${formatCurrency(ch.actual)} / ${formatCurrency(ch.budget)}</div>
+            <div class="channel-badge">${badge}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderSummary() {
+      const channels = getChannels();
+      document.getElementById('tab-summary').innerHTML = `
+        <div class="section-gap">
+          <div class="section-header">Budget Overview</div>
+          ${renderKPIs()}
+        </div>
+        <div class="section-gap">
+          <div class="section-header">Burn Rate</div>
+          ${renderBurnBar()}
+        </div>
+        <div class="section-gap">
+          <div class="section-header">Channel Pacing</div>
+          ${renderChannelPacing(channels)}
+        </div>`;
+    }
+
+    function renderWeeklyTable() {
+      const weekRows = getWeekRows();
+      const expectedPct = getExpectedPct();
+      if (weekRows.length === 0) {
+        return '<tr><td colspan="5" style="color:var(--slate2);font-style:italic;padding:20px 12px">No weekly data available</td></tr>';
+      }
+      return weekRows.map(row => {
+        const budget = row.weeklyBudget || 0;
+        const actual = row.weeklyActual || 0;
+        const diff = row.weeklyDiff !== null ? row.weeklyDiff : (actual - budget);
+        const pct = budget > 0 ? (actual / budget * 100) : 0;
+        const badge = getStatusBadge(pct, expectedPct);
+        const diffClass = diff > 0 ? 'diff-positive' : 'diff-negative';
+        const diffSign = diff > 0 ? '+' : '';
+        const isCurrent = isCurrentWeek(row);
+        return `<tr${isCurrent ? ' class="current-week"' : ''}>
+          <td>${formatWeekRange(row.date)}</td>
+          <td class="text-right">${formatCurrency(budget)}</td>
+          <td class="text-right">${formatCurrency(actual)}</td>
+          <td class="text-right ${diffClass}">${diffSign}${formatCurrency(diff)}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderChannelTable(channels) {
+      const expectedPct = getExpectedPct();
+      let totalBudget = 0, totalActual = 0;
+      const rows = channels.map(ch => {
+        totalBudget += ch.budget;
+        totalActual += ch.actual;
+        const remaining = ch.budget - ch.actual;
+        const pct = ch.budget > 0 ? (ch.actual / ch.budget * 100) : 0;
+        const badge = getStatusBadge(pct, expectedPct);
+        return `<tr>
+          <td>${ch.name}</td>
+          <td class="text-right">${formatCurrency(ch.budget)}</td>
+          <td class="text-right">${formatCurrency(ch.actual)}</td>
+          <td class="text-right">${formatCurrency(remaining)}</td>
+          <td class="text-right">${pct.toFixed(1)}%</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('');
+      const totalRemaining = totalBudget - totalActual;
+      const totalPct = totalBudget > 0 ? (totalActual / totalBudget * 100) : 0;
+      return rows + `<tr class="totals-row">
+        <td>Total</td>
+        <td class="text-right">${formatCurrency(totalBudget)}</td>
+        <td class="text-right">${formatCurrency(totalActual)}</td>
+        <td class="text-right">${formatCurrency(totalRemaining)}</td>
+        <td class="text-right">${totalPct.toFixed(1)}%</td>
+        <td></td>
+      </tr>`;
+    }
+
+    function renderDetail() {
+      const channels = getChannels();
+      document.getElementById('tab-detail').innerHTML = `
+        <div class="section-gap">
+          <div class="section-header">Weekly Performance</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Week</th>
+                <th class="text-right">Budget</th>
+                <th class="text-right">Actual</th>
+                <th class="text-right">Diff</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${renderWeeklyTable()}</tbody>
+          </table>
+        </div>
+        <div class="section-gap">
+          <div class="section-header">Channel Breakdown</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th class="text-right">Budget</th>
+                <th class="text-right">Spent</th>
+                <th class="text-right">Remaining</th>
+                <th class="text-right">Pace%</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${renderChannelTable(channels)}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function renderLog() {
+      document.getElementById('tab-log').innerHTML = `
+        <div class="log-section">
+          <div class="log-section-title">Log Daily Spend</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="log-date">Date</label>
+              <input type="date" id="log-date" min="2026-05-26" max="2026-08-11">
+            </div>
+          </div>
+          <div class="log-section-title" style="margin-top:8px">Google Ads</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="log-display">Display cumulative spend ($)</label>
+              <input type="number" id="log-display" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-field">
+              <label for="log-search">Search cumulative spend ($)</label>
+              <input type="number" id="log-search" placeholder="0.00" min="0" step="0.01">
+            </div>
+          </div>
+          <div class="log-section-title" style="margin-top:8px">Meta Ads</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="log-meta">Meta cumulative spend ($)</label>
+              <input type="number" id="log-meta" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-field"></div>
+          </div>
+          <p class="form-note">Enter cumulative (total-to-date) spend figures. Google Display + Search are combined into column D; Meta goes into column E.</p>
+          <div style="margin-top:16px">
+            <button class="btn-save" id="save-btn" onclick="handleSave()">Save</button>
+          </div>
+          <div id="log-msg"></div>
+        </div>`;
+    }
+
+    // ── Log Spend ──
+    async function handleSave() {
+      const dateVal = document.getElementById('log-date').value;
+      const displayVal = document.getElementById('log-display').value;
+      const searchVal = document.getElementById('log-search').value;
+      const metaVal = document.getElementById('log-meta').value;
+      const msgEl = document.getElementById('log-msg');
+      msgEl.innerHTML = '';
+
+      if (!dateVal) {
+        msgEl.innerHTML = '<div class="msg-error">Please select a date.</div>';
+        return;
+      }
+
+      const row = findRowForDate(dateVal);
+      if (!row) {
+        msgEl.innerHTML = '<div class="msg-error">Date not in campaign range (May 26\u2013Aug 11, 2026).</div>';
+        return;
+      }
+
+      const googleCumulative = (parseFloat(displayVal) || 0) + (parseFloat(searchVal) || 0);
+      const metaCumulative = parseFloat(metaVal) || 0;
+
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        await writeSpend(row.sheetRowNum, googleCumulative, metaCumulative);
+        msgEl.innerHTML = '<div class="msg-success">Saved successfully. Reloading data…</div>';
+        await loadData();
+        msgEl.innerHTML = '<div class="msg-success">Saved and data refreshed.</div>';
+      } catch (e) {
+        msgEl.innerHTML = '<div class="msg-error">Save failed: ' + e.message + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+      }
+    }
+
+    async function writeSpend(rowNum, googleVal, metaVal) {
+      const range = encodeURIComponent('Tracker!D' + rowNum + ':E' + rowNum);
+      const url = SHEETS_BASE + '/values/' + range + '?valueInputOption=USER_ENTERED';
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Bearer ' + accessToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ values: [[googleVal, metaVal]] }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error?.message || 'HTTP ' + res.status);
+      }
+      return res.json();
+    }
+
+    // ── Init ──
+    window.onload = function () {
+      // Wait for GSI to load
+      const waitForGsi = setInterval(() => {
+        if (window.google && window.google.accounts) {
+          clearInterval(waitForGsi);
+          initAuth();
+        }
+      }, 100);
+    };
+  </script>
+</body>
+</html>
