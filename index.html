@@ -20,6 +20,7 @@
       --red-text: #991b1b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
     body {
       background: var(--bg);
       font-family: system-ui, -apple-system, sans-serif;
@@ -407,7 +408,6 @@
       font-family: inherit;
     }
   </style>
-  <script src="https://accounts.google.com/gsi/client" onload="initAuth()"></script>
 </head>
 <body>
 
@@ -539,6 +539,10 @@
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: OAUTH_SCOPE,
+        error_callback: (err) => {
+          document.getElementById('error-msg').textContent = 'Sign-in error: ' + (err.type || 'unknown error');
+          document.getElementById('error-banner').hidden = false;
+        },
         callback: async (resp) => {
           if (resp.error) {
             document.getElementById('error-msg').textContent = 'Sign-in failed: ' + resp.error;
@@ -565,7 +569,12 @@
     }
 
     function signIn() {
-      tokenClient.requestAccessToken({ prompt: '' });
+      if (!tokenClient) {
+        document.getElementById('error-msg').textContent = 'Authentication not ready — please refresh the page.';
+        document.getElementById('error-banner').hidden = false;
+        return;
+      }
+      tokenClient.requestAccessToken({ prompt: 'select_account' });
     }
 
     function signOut() {
@@ -1045,5 +1054,6 @@
       // loadData() is triggered automatically after successful OAuth sign-in.
     };
   </script>
+  <script src="https://accounts.google.com/gsi/client" onload="initAuth()"></script>
 </body>
 </html>
