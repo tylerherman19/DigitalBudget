@@ -442,6 +442,7 @@
       <div id="signin-btn-container">
         <button class="btn-signin" onclick="requestToken()">Sign in with Google</button>
       </div>
+      <div id="auth-error" hidden style="margin-top:16px;padding:10px 14px;background:var(--red-bg);color:var(--red-text);font-size:13px;border-radius:4px;"></div>
     </div>
   </div>
 
@@ -566,6 +567,13 @@
     }
 
     // ── Auth ──
+    function showAuthError(msg) {
+      const el = document.getElementById('auth-error');
+      if (!el) return;
+      if (msg) { el.textContent = msg; el.hidden = false; }
+      else      { el.textContent = ''; el.hidden = true;  }
+    }
+
     function initAuth() {
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
@@ -575,16 +583,27 @@
     }
 
     function requestToken() {
+      showAuthError(null);
       if (tokenClient) {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        tokenClient.requestAccessToken({ prompt: '' });
+      } else {
+        showAuthError('Google Sign-In is not available. Your browser may be blocking the sign-in script (e.g. an ad blocker). Please disable it for this page and reload.');
       }
     }
 
     function handleTokenResponse(resp) {
       if (resp.error) {
         console.error('Token error:', resp);
+        const friendly = {
+          'access_denied':            'Access was denied. Please try again and click "Allow".',
+          'immediate_failed':         'Silent sign-in failed. Click the button to sign in.',
+          'popup_closed_by_user':     'The sign-in window was closed. Please try again.',
+          'popup_blocked_by_browser': 'Your browser blocked the sign-in popup. Allow popups for this page and try again.',
+        };
+        showAuthError(friendly[resp.error] || ('Sign-in failed: ' + resp.error));
         return;
       }
+      showAuthError(null);
       accessToken = resp.access_token;
       fetchUserInfo().then(() => {
         document.getElementById('auth-screen').hidden = true;
@@ -1074,7 +1093,21 @@
 
     // ── Init ──
     window.onload = function () {
-      // Wait for GSI to load
+      // Redirect-flow fallback: GSI appends token to hash when popup is blocked
+      if (window.location.hash) {
+        const params = new URLSearchParams(window.location.hash.slice(1));
+        const hashToken = params.get('access_token');
+        if (hashToken) {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+          handleTokenResponse({
+            access_token: hashToken,
+            token_type:   params.get('token_type') || 'Bearer',
+            expires_in:   params.get('expires_in'),
+            scope:        params.get('scope'),
+          });
+        }
+      }
+      // Normal popup flow
       const waitForGsi = setInterval(() => {
         if (window.google && window.google.accounts) {
           clearInterval(waitForGsi);
