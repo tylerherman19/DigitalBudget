@@ -270,6 +270,7 @@
     .badge-gray { background: #e5e7eb; color: #374151; }
     .pre-campaign-row td { color: var(--slate); font-style: italic; background: #f5f5f2; }
     .pre-campaign-note { font-size: 13px; color: var(--slate2); margin-bottom: 12px; }
+    .week-section-divider td { border-top: 2px solid #d4cfc7; padding: 0; height: 0; font-size: 0; }
 
     /* ── Tables ── */
     table {
@@ -658,6 +659,7 @@
           gSearchBudget: parseFloatOrZero(get(2)),
           gActual: parseFloat2(get(3)),
           metaActual: parseFloat2(get(4)),
+          dspActual: parseFloat2(get(11)),
           metaDailyBudget: parseFloatOrZero(get(7)),
           dailyTotalBudget: parseFloatOrZero(get(12)),
           dailyActual: parseFloatOrZero(get(13)),
@@ -706,6 +708,14 @@
       return last;
     }
 
+    function getDspActual() {
+      let last = 0;
+      for (const r of dataRows) {
+        if (r.dspActual !== null) last = r.dspActual;
+      }
+      return last;
+    }
+
     function getMetaActual() {
       let last = 0;
       for (const r of dataRows) {
@@ -743,7 +753,7 @@
         { name: 'Google Display',    budget: gDspBudget,          actual: gActual * ratio },
         { name: 'Google Search',     budget: gSrchBudget,         actual: gActual * (1 - ratio) },
         { name: 'Meta',              budget: getMetaBudget(),      actual: getMetaActual() },
-        { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: 0 },
+        { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: getDspActual() },
       ];
     }
 
@@ -884,11 +894,31 @@
 
     function renderWeeklyTable() {
       const weekRows = getWeekRows();
+      const preCampaignRows = getPreCampaignRows();
       const expectedPct = getExpectedPct();
 
-      if (weekRows.length === 0) {
+      if (weekRows.length === 0 && preCampaignRows.length === 0) {
         return '<tr><td colspan="5" style="color:var(--slate2);font-style:italic;padding:20px 12px">No weekly data available</td></tr>';
       }
+
+      const preRows = preCampaignRows.map(row => {
+        const budget = row.weeklyBudget || 0;
+        const actual = row.weeklyActual || 0;
+        const diff = row.weeklyDiff !== null ? row.weeklyDiff : (actual - budget);
+        const diffClass = diff > 0 ? 'diff-positive' : 'diff-negative';
+        const diffSign = diff > 0 ? '+' : '';
+        return `<tr class="pre-campaign-row">
+          <td>${escapeHtml(row.preLabel || 'Before')}</td>
+          <td class="text-right">${formatCurrency(budget)}</td>
+          <td class="text-right">${formatCurrency(actual)}</td>
+          <td class="text-right ${diffClass}">${diffSign}${formatCurrency(diff)}</td>
+          <td><span class="status-badge badge-gray">Pre-Campaign</span></td>
+        </tr>`;
+      }).join('');
+
+      const divider = (preCampaignRows.length > 0 && weekRows.length > 0)
+        ? `<tr class="week-section-divider"><td colspan="5"></td></tr>`
+        : '';
 
       const regularRows = weekRows.map(row => {
         const budget = row.weeklyBudget || 0;
@@ -908,7 +938,7 @@
         </tr>`;
       }).join('');
 
-      return regularRows;
+      return preRows + divider + regularRows;
     }
 
     function renderChannelTable(channels) {
@@ -983,7 +1013,6 @@
     function renderDetail() {
       const channels = getChannels();
       document.getElementById('tab-detail').innerHTML = `
-        ${renderPreCampaignSection()}
         <div class="section-gap">
           <div class="section-header">Weekly Performance</div>
           <table>
