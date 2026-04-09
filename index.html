@@ -269,6 +269,7 @@
     .badge-red { background: var(--red-bg); color: var(--red-text); }
     .badge-gray { background: #e5e7eb; color: #374151; }
     .pre-campaign-row td { color: var(--slate); font-style: italic; background: #f5f5f2; }
+    .pre-campaign-note { font-size: 13px; color: var(--slate2); margin-bottom: 12px; }
 
     /* ── Tables ── */
     table {
@@ -884,24 +885,8 @@
     function renderWeeklyTable() {
       const weekRows = getWeekRows();
       const expectedPct = getExpectedPct();
-      const preCampaignRows = getPreCampaignRows();
 
-      const preCampaignHtml = preCampaignRows.map(row => {
-        const budget = row.weeklyBudget || 0;
-        const actual = row.weeklyActual || 0;
-        const diff = row.weeklyDiff !== null ? row.weeklyDiff : (actual - budget);
-        const diffClass = diff >= 0 ? 'diff-positive' : 'diff-negative';
-        const diffSign = diff > 0 ? '+' : '';
-        return `<tr class="pre-campaign-row">
-          <td>${escapeHtml(row.preLabel || 'Before Digital Start')}</td>
-          <td class="text-right">${formatCurrency(budget)}</td>
-          <td class="text-right">${formatCurrency(actual)}</td>
-          <td class="text-right ${diffClass}">${diffSign}${formatCurrency(diff)}</td>
-          <td><span class="status-badge badge-gray">Pre-Campaign</span></td>
-        </tr>`;
-      }).join('');
-
-      if (weekRows.length === 0 && !preCampaignHtml) {
+      if (weekRows.length === 0) {
         return '<tr><td colspan="5" style="color:var(--slate2);font-style:italic;padding:20px 12px">No weekly data available</td></tr>';
       }
 
@@ -923,7 +908,7 @@
         </tr>`;
       }).join('');
 
-      return preCampaignHtml + regularRows;
+      return regularRows;
     }
 
     function renderChannelTable(channels) {
@@ -956,9 +941,49 @@
       </tr>`;
     }
 
+    function renderPreCampaignSection() {
+      const rows = dataRows.filter(r => r.isPreCampaign);
+      if (rows.length === 0) return '';
+
+      const tableRows = rows.map(row => {
+        const budget = row.weeklyBudget !== null ? row.weeklyBudget : row.gSearchBudget;
+        const actual = row.weeklyActual !== null ? row.weeklyActual : (row.gActual || 0);
+        const remaining = budget - actual;
+        const pct = budget > 0 ? (actual / budget * 100) : 0;
+        return `<tr class="pre-campaign-row">
+          <td>${escapeHtml(row.preLabel || 'Before Digital Start')}</td>
+          <td class="text-right">${formatCurrency(budget)}</td>
+          <td class="text-right">${formatCurrency(actual)}</td>
+          <td class="text-right">${formatCurrency(remaining)}</td>
+          <td class="text-right">${pct.toFixed(1)}%</td>
+          <td><span class="status-badge badge-gray">Pre-Campaign</span></td>
+        </tr>`;
+      }).join('');
+
+      return `
+        <div class="section-gap">
+          <div class="section-header">Pre-Campaign Spend</div>
+          <p class="pre-campaign-note">Spend that occurred before the main digital campaign launched on ${formatDate(CAMPAIGN_START)}. Not included in campaign burn rate or pacing.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th class="text-right">Budget</th>
+                <th class="text-right">Actual</th>
+                <th class="text-right">Remaining</th>
+                <th class="text-right">Spent%</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>`;
+    }
+
     function renderDetail() {
       const channels = getChannels();
       document.getElementById('tab-detail').innerHTML = `
+        ${renderPreCampaignSection()}
         <div class="section-gap">
           <div class="section-header">Weekly Performance</div>
           <table>
