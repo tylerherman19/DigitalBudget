@@ -372,7 +372,42 @@
       font-size: 13px;
       margin-top: 12px;
     }
+
+    /* ── Auth bar ── */
+    .auth-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 16px;
+      font-size: 13px;
+    }
+    .btn-signin {
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .auth-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--slate);
+    }
+    .auth-email { font-weight: 500; color: var(--navy); }
+    .btn-signout {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--slate);
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+    }
   </style>
+  <script src="https://accounts.google.com/gsi/client" onload="initAuth()"></script>
 </head>
 <body>
 
@@ -391,6 +426,14 @@
       </div>
     </header>
     <hr class="header-rule">
+
+    <div class="auth-bar">
+      <button class="btn-signin" id="auth-signin" onclick="signIn()">Sign in with Google</button>
+      <div class="auth-indicator" id="auth-indicator" hidden>
+        <span id="auth-email" class="auth-email"></span>
+        <button class="btn-signout" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
 
     <nav class="tabs">
       <button class="tab active" data-tab="summary" onclick="switchTab('summary')">Summary</button>
@@ -412,7 +455,9 @@
 
   <script>
     // ── Constants ──
-const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
+    const CLIENT_ID = '1023469996726-hlpc7lc2ducddp8q286m53tp0qsti3op.apps.googleusercontent.com';
+    const OAUTH_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+    const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
     const SHEET_NAME = 'Tracker';
     const ELECTION_DATE = new Date(2026, 7, 11);   // Aug 11 2026
     const CAMPAIGN_START = new Date(2026, 4, 26);  // May 26 2026
@@ -423,6 +468,8 @@ const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
     let dataRows = [];
     let totalsRow = null;
     let currentTab = 'summary';
+    let tokenClient = null;
+    let accessToken = null;
 
     // ── Utility Functions ──
     function sum(arr) {
@@ -487,23 +534,78 @@ const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
       return '<span class="status-badge badge-green">On Pace</span>';
     }
 
+    // ── Auth ──
+    function initAuth() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: OAUTH_SCOPE,
+        callback: async (resp) => {
+          if (resp.error) {
+            document.getElementById('error-msg').textContent = 'Sign-in failed: ' + resp.error;
+            document.getElementById('error-banner').hidden = false;
+            return;
+          }
+          accessToken = resp.access_token;
+          let email = 'Signed in';
+          try {
+            const uir = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: 'Bearer ' + accessToken }
+            });
+            if (uir.ok) {
+              const ui = await uir.json();
+              email = ui.email || email;
+            }
+          } catch (_) {}
+          document.getElementById('auth-email').textContent = email;
+          document.getElementById('auth-indicator').hidden = false;
+          document.getElementById('auth-signin').hidden = true;
+          loadData();
+        }
+      });
+    }
+
+    function signIn() {
+      tokenClient.requestAccessToken({ prompt: '' });
+    }
+
+    function signOut() {
+      if (accessToken) {
+        google.accounts.oauth2.revoke(accessToken, () => {});
+      }
+      accessToken = null;
+      document.getElementById('auth-indicator').hidden = true;
+      document.getElementById('auth-signin').hidden = false;
+      document.getElementById('error-banner').hidden = true;
+    }
+
     // ── Data ──
     async function loadData() {
+      if (!accessToken) return;
       document.getElementById('error-banner').hidden = true;
       try {
+        const authHeader = { Authorization: 'Bearer ' + accessToken };
         const [mainRes, totalsRes] = await Promise.all([
-          fetch(SHEETS_BASE + '/values/Tracker!A3:T80'),
-          fetch(SHEETS_BASE + '/values/Tracker!M82:T82'),
+          fetch(SHEETS_BASE + '/values/Tracker!A3:T80', { headers: authHeader }),
+          fetch(SHEETS_BASE + '/values/Tracker!M82:T82', { headers: authHeader }),
         ]);
-        if (!mainRes.ok) throw new Error('Main fetch failed: ' + mainRes.status);
-        if (!totalsRes.ok) throw new Error('Totals fetch failed: ' + totalsRes.status);
+        if (!mainRes.ok) {
+          if (mainRes.status === 403) throw new Error('403');
+          throw new Error('Main fetch failed: ' + mainRes.status);
+        }
+        if (!totalsRes.ok) {
+          if (totalsRes.status === 403) throw new Error('403');
+          throw new Error('Totals fetch failed: ' + totalsRes.status);
+        }
         const mainJson = await mainRes.json();
         const totalsJson = await totalsRes.json();
         processSheetData(mainJson.values || [], totalsJson.values || []);
         renderAll();
       } catch (e) {
         console.error('loadData error', e);
-        document.getElementById('error-msg').textContent = 'Failed to load data: ' + e.message;
+        const msg = e.message === '403'
+          ? 'Error 403 \u2014 make sure this Google account has Editor access to the spreadsheet and that the Google Sheets API is enabled in Cloud Console.'
+          : 'Failed to load data: ' + e.message;
+        document.getElementById('error-msg').textContent = msg;
         document.getElementById('error-banner').hidden = false;
       }
     }
@@ -925,10 +1027,12 @@ const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + accessToken,
         },
         body: JSON.stringify({ values: [[googleVal, metaVal]] }),
       });
       if (!res.ok) {
+        if (res.status === 403) throw new Error('Error 403 \u2014 make sure this Google account has Editor access to the spreadsheet and that the Google Sheets API is enabled in Cloud Console.');
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.error?.message || 'HTTP ' + res.status);
       }
@@ -937,7 +1041,8 @@ const SPREADSHEET_ID = '1gHPmpRQxXCtBCB6AkXVljv1VRa1m6W5YV_Q34fevF0Q';
 
     // ── Init ──
     window.onload = function () {
-      loadData();
+      // initAuth() is called via the GIS script's onload attribute once the library loads.
+      // loadData() is triggered automatically after successful OAuth sign-in.
     };
   </script>
 </body>
