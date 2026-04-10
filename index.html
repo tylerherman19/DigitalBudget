@@ -606,8 +606,8 @@
       try {
         const authHeader = { Authorization: 'Bearer ' + accessToken };
         const [mainRes, totalsRes] = await Promise.all([
-          fetch(SHEETS_BASE + '/values/Tracker!A2:T80', { headers: authHeader }),
-          fetch(SHEETS_BASE + '/values/Tracker!A82:T82', { headers: authHeader }),
+          fetch(SHEETS_BASE + '/values/Tracker!A2:U80', { headers: authHeader }),
+          fetch(SHEETS_BASE + '/values/Tracker!A82:U82', { headers: authHeader }),
         ]);
         if (!mainRes.ok) {
           if (mainRes.status === 403) throw new Error('403');
@@ -660,12 +660,12 @@
           metaActual: parseFloat2(get(4)),
           dspActual: parseFloat2(get(11)),
           metaDailyBudget: parseFloatOrZero(get(7)),
-          dailyTotalBudget: parseFloatOrZero(get(12)),
-          dailyActual: parseFloatOrZero(get(13)),
-          runningBudget: parseFloatOrZero(get(14)),
-          weeklyBudget: parseFloat2(get(16)),
-          weeklyActual: parseFloat2(get(17)),
-          weeklyDiff: parseFloat2(get(19)),
+          dailyTotalBudget: parseFloatOrZero(get(13)),  // N - Daily Total Budget (planned)
+          dailyActual: parseFloatOrZero(get(14)),       // O - Daily Actual (actual spend)
+          runningBudget: parseFloatOrZero(get(15)),     // P - Running Budget (cumulative planned)
+          weeklyBudget: parseFloat2(get(17)),           // R - Weekly Budget
+          weeklyActual: parseFloat2(get(18)),           // S - Weekly Total (actual)
+          weeklyDiff: parseFloat2(get(20)),             // U - Weekly Difference
         };
       });
 
@@ -675,16 +675,16 @@
         totalsRow = {
           gDisplayBudget:   parseFloatOrZero(get(1)),   // B82
           gSearchBudget:    parseFloatOrZero(get(2)),   // C82
-          gActual:          parseFloatOrZero(get(3)),   // D82
-          metaActual:       parseFloatOrZero(get(4)),   // E82
-          metaDailyBudget:  parseFloatOrZero(get(7)),   // H82
-          dspBudget:        parseFloatOrZero(get(11)),  // L82 - DSPolitical budget
-          dspActual:        parseFloatOrZero(get(12)),  // M82 - DSPolitical actual
-          dailyActual:      parseFloatOrZero(get(13)),  // N82
-          runningBudget:    parseFloatOrZero(get(14)),  // O82
-          weeklyBudget:     parseFloat2(get(16)),       // Q82
-          weeklyActual:     parseFloat2(get(17)),       // R82
-          weeklyDiff:       parseFloat2(get(19)),       // T82
+          gActual:          parseFloatOrZero(get(3)),   // D82 - Google actual (cumulative)
+          metaActual:       parseFloatOrZero(get(4)),   // E82 - Meta actual (cumulative)
+          metaDailyBudget:  parseFloatOrZero(get(7)),   // H82 - Meta total budget
+          dspBudget:        parseFloatOrZero(get(11)),  // L82 - DSPolitical lump-sum budget
+          dspActual:        parseFloatOrZero(get(12)),  // M82 - DSPolitical spend proxy
+          dailyActual:      parseFloatOrZero(get(14)),  // O82 - Daily Actual sum
+          runningBudget:    parseFloatOrZero(get(15)),  // P82 - Running Budget
+          totalBudget:      parseFloatOrZero(get(17)),  // R82 - Total campaign budget (SUM of weekly budgets)
+          weeklyActual:     parseFloat2(get(18)),       // S82 - Weekly Total (actual)
+          weeklyDiff:       parseFloat2(get(20)),       // U82 - Weekly Difference
         };
       }
     }
@@ -697,11 +697,12 @@
     // ── Computed Values ──
     function getTotalBudget() {
       if (!totalsRow) return 0;
-      return totalsRow.gDisplayBudget + totalsRow.gSearchBudget + totalsRow.metaDailyBudget + totalsRow.dspBudget;
+      return totalsRow.totalBudget;  // R82 = SUM(R2:R80) = total campaign budget
     }
 
     function getSpentToDate() {
-      return totalsRow ? totalsRow.dailyActual : 0;
+      // D82 + E82 + M82 = Google actual + Meta actual + DSPolitical spend
+      return totalsRow ? totalsRow.gActual + totalsRow.metaActual + totalsRow.dspActual : 0;
     }
 
     function getGoogleActual() {
