@@ -678,8 +678,8 @@
           gActual:          parseFloatOrZero(get(3)),   // D82
           metaActual:       parseFloatOrZero(get(4)),   // E82
           metaDailyBudget:  parseFloatOrZero(get(7)),   // H82
-          dspActual:        parseFloatOrZero(get(11)),  // L82
-          dailyTotalBudget: parseFloatOrZero(get(12)),  // M82
+          dspBudget:        parseFloatOrZero(get(11)),  // L82 - DSPolitical budget
+          dspActual:        parseFloatOrZero(get(12)),  // M82 - DSPolitical actual
           dailyActual:      parseFloatOrZero(get(13)),  // N82
           runningBudget:    parseFloatOrZero(get(14)),  // O82
           weeklyBudget:     parseFloat2(get(16)),       // Q82
@@ -696,7 +696,8 @@
 
     // ── Computed Values ──
     function getTotalBudget() {
-      return totalsRow ? totalsRow.dailyTotalBudget : 0;
+      if (!totalsRow) return 0;
+      return totalsRow.gDisplayBudget + totalsRow.gSearchBudget + totalsRow.metaDailyBudget + totalsRow.dspBudget;
     }
 
     function getSpentToDate() {
@@ -728,11 +729,7 @@
     }
 
     function getDspBudget() {
-      if (!totalsRow) return 0;
-      return totalsRow.dailyTotalBudget
-        - totalsRow.gDisplayBudget
-        - totalsRow.gSearchBudget
-        - totalsRow.metaDailyBudget;
+      return totalsRow ? totalsRow.dspBudget : 0;
     }
 
     function getExpectedPct() {
