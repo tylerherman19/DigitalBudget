@@ -677,6 +677,7 @@
           dailyTotalBudget: parseFloatOrZero(get(0)),
           dailyActual: parseFloatOrZero(get(1)),
           runningBudget: parseFloatOrZero(get(2)),
+          digitalActual: parseFloatOrZero(get(4)),
           weeklyBudget: parseFloat2(get(4)),
           weeklyActual: parseFloat2(get(5)),
           weeklyDiff: parseFloat2(get(7)),
@@ -698,6 +699,10 @@
       return sum(dataRows
         .filter(r => !r.isPreCampaign && (r.gActual !== null || r.metaActual !== null))
         .map(r => r.dailyActual));
+    }
+
+    function getDigitalActual() {
+      return totalsRow ? totalsRow.digitalActual : 0;
     }
 
     function getGoogleActual() {
@@ -801,7 +806,7 @@
       return [
         { name: 'Google',            budget: getGDisplayBudget() + getGSearchBudget(), actual: getGoogleActual() },
         { name: 'Meta',              budget: getMetaBudget(),      actual: getMetaActual() },
-        { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: getDspActual() },
+        { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: DSPOLITICAL_BUDGET },
       ];
     }
 
@@ -1004,12 +1009,13 @@
           <td>${badge}</td>
         </tr>`;
       }).join('');
-      const totalRemaining = totalBudget - totalActual;
-      const totalPct = totalBudget > 0 ? (totalActual / totalBudget * 100) : 0;
+      const digitalTotal = getDigitalActual();
+      const totalRemaining = totalBudget - digitalTotal;
+      const totalPct = totalBudget > 0 ? (digitalTotal / totalBudget * 100) : 0;
       return rows + `<tr class="totals-row">
         <td>Total</td>
         <td class="text-right">${formatCurrency(totalBudget)}</td>
-        <td class="text-right">${formatCurrency(totalActual)}</td>
+        <td class="text-right">${formatCurrency(digitalTotal)}</td>
         <td class="text-right">${formatCurrency(totalRemaining)}</td>
         <td class="text-right">${totalPct.toFixed(1)}%</td>
         <td></td>
