@@ -465,7 +465,6 @@
     const SHEET_NAME = 'Tracker';
     const ELECTION_DATE = new Date(2026, 7, 11);   // Aug 11 2026
     const CAMPAIGN_START = new Date(2026, 4, 26);  // May 26 2026
-    const DSPOLITICAL_BUDGET = 6000;
     const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SPREADSHEET_ID;
 
     // ── State ──
@@ -725,15 +724,21 @@
     }
 
     function getGDisplayBudget() {
-      return sum(dataRows.map(r => r.gDisplayBudget));
+      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.gDisplayBudget));
     }
 
     function getGSearchBudget() {
-      return sum(dataRows.map(r => r.gSearchBudget));
+      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.gSearchBudget));
     }
 
     function getMetaBudget() {
-      return sum(dataRows.map(r => r.metaDailyBudget));
+      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.metaDailyBudget));
+    }
+
+    function getDspBudget() {
+      return sum(dataRows.filter(r => !r.isPreCampaign).map(r =>
+        r.dailyTotalBudget - r.gDisplayBudget - r.gSearchBudget - r.metaDailyBudget
+      ));
     }
 
     function getExpectedPct() {
@@ -801,7 +806,7 @@
       return [
         { name: 'Google',            budget: getGDisplayBudget() + getGSearchBudget(), actual: getGoogleActual() },
         { name: 'Meta',              budget: getMetaBudget(),      actual: getMetaActual() },
-        { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: getDspActual() },
+        { name: 'DSPolitical/Other', budget: getDspBudget(),       actual: getDspActual() },
       ];
     }
 
