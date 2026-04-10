@@ -465,7 +465,7 @@
     const SHEET_NAME = 'Tracker';
     const ELECTION_DATE = new Date(2026, 7, 11);   // Aug 11 2026
     const CAMPAIGN_START = new Date(2026, 4, 26);  // May 26 2026
-    const DSPOLITICAL_BUDGET = 2500;
+    const DSPOLITICAL_BUDGET = 6000;
     const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets/' + SPREADSHEET_ID;
 
     // ── State ──
@@ -743,15 +743,39 @@
       return totalDays > 0 ? Math.min(100, daysElapsed / totalDays * 100) : 0;
     }
 
+    function getPreCampaignBudget() {
+      return sum(getPreCampaignRows().map(r => r.weeklyBudget || 0));
+    }
+
+    function getPreCampaignActual() {
+      return sum(getPreCampaignRows().map(r => r.weeklyActual || 0));
+    }
+
+    function renderPreCampaignBurnBar() {
+      const rows = getPreCampaignRows();
+      if (rows.length === 0) return '';
+      const budget = getPreCampaignBudget();
+      const actual = getPreCampaignActual();
+      const pct = budget > 0 ? Math.min(100, actual / budget * 100) : 0;
+      return `
+        <div class="burn-container" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--slate2)">Pre-Campaign</span>
+            <span style="font-size:12px;color:var(--slate2)">${formatCurrency(actual)} / ${formatCurrency(budget)}</span>
+          </div>
+          <div class="burn-track">
+            <div class="burn-fill" style="width:${pct}%;background:var(--slate2)"></div>
+          </div>
+          <div class="date-labels" style="margin-top:4px">
+            <span>${rows[0].preLabel || 'Pre-Campaign'}</span>
+            <span>${formatDate(CAMPAIGN_START)}</span>
+          </div>
+        </div>`;
+    }
+
     function getChannels() {
-      const gActual = getGoogleActual();
-      const gDspBudget = getGDisplayBudget();
-      const gSrchBudget = getGSearchBudget();
-      const gTotal = gDspBudget + gSrchBudget;
-      const ratio = gTotal > 0 ? gDspBudget / gTotal : 0.5;
       return [
-        { name: 'Google Display',    budget: gDspBudget,          actual: gActual * ratio },
-        { name: 'Google Search',     budget: gSrchBudget,         actual: gActual * (1 - ratio) },
+        { name: 'Google',            budget: getGDisplayBudget() + getGSearchBudget(), actual: getGoogleActual() },
         { name: 'Meta',              budget: getMetaBudget(),      actual: getMetaActual() },
         { name: 'DSPolitical/Other', budget: DSPOLITICAL_BUDGET,  actual: getDspActual() },
       ];
@@ -884,6 +908,7 @@
         </div>
         <div class="section-gap">
           <div class="section-header">Burn Rate</div>
+          ${renderPreCampaignBurnBar()}
           ${renderBurnBar()}
         </div>
         <div class="section-gap">
@@ -1013,6 +1038,7 @@
     function renderDetail() {
       const channels = getChannels();
       document.getElementById('tab-detail').innerHTML = `
+        ${renderPreCampaignSection()}
         <div class="section-gap">
           <div class="section-header">Weekly Performance</div>
           <table>
