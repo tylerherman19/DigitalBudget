@@ -743,12 +743,35 @@
       return totalDays > 0 ? Math.min(100, daysElapsed / totalDays * 100) : 0;
     }
 
+    function getPreCampaignRows() {
+      return dataRows.filter(r => r.isPreCampaign);
+    }
+
     function getPreCampaignBudget() {
-      return sum(getPreCampaignRows().map(r => r.weeklyBudget || 0));
+      const rows = getPreCampaignRows();
+      // 1. Weekly budget column (Q)
+      const weeklySum = sum(rows.filter(r => r.weeklyBudget !== null).map(r => r.weeklyBudget));
+      if (weeklySum > 0) return weeklySum;
+      // 2. Daily total budget column (M)
+      const dailySum = sum(rows.map(r => r.dailyTotalBudget || 0));
+      if (dailySum > 0) return dailySum;
+      // 3. Google budget columns (B+C) + Meta (H)
+      return sum(rows.map(r => (r.gDisplayBudget || 0) + (r.gSearchBudget || 0) + (r.metaDailyBudget || 0)));
     }
 
     function getPreCampaignActual() {
-      return sum(getPreCampaignRows().map(r => r.weeklyActual || 0));
+      const rows = getPreCampaignRows();
+      // 1. Weekly actual column (R)
+      const weeklySum = sum(rows.filter(r => r.weeklyActual !== null).map(r => r.weeklyActual));
+      if (weeklySum > 0) return weeklySum;
+      // 2. Last known channel actuals from pre-campaign rows
+      let gLast = 0, metaLast = 0, dspLast = 0;
+      for (const r of rows) {
+        if (r.gActual !== null) gLast = r.gActual;
+        if (r.metaActual !== null) metaLast = r.metaActual;
+        if (r.dspActual !== null) dspLast = r.dspActual;
+      }
+      return gLast + metaLast + dspLast;
     }
 
     function renderPreCampaignBurnBar() {
@@ -756,7 +779,8 @@
       if (rows.length === 0) return '';
       const budget = getPreCampaignBudget();
       const actual = getPreCampaignActual();
-      const pct = budget > 0 ? Math.min(100, actual / budget * 100) : 0;
+      const pct = budget > 0 ? Math.min(100, actual / budget * 100) : (actual > 0 ? 100 : 0);
+      const firstLabel = rows.find(r => r.preLabel)?.preLabel || 'Pre-Campaign';
       return `
         <div class="burn-container" style="margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -767,7 +791,7 @@
             <div class="burn-fill" style="width:${pct}%;background:var(--slate2)"></div>
           </div>
           <div class="date-labels" style="margin-top:4px">
-            <span>${rows[0].preLabel || 'Pre-Campaign'}</span>
+            <span>${firstLabel}</span>
             <span>${formatDate(CAMPAIGN_START)}</span>
           </div>
         </div>`;
@@ -783,10 +807,6 @@
 
     function getWeekRows() {
       return dataRows.filter(r => r.weeklyBudget !== null && !r.isPreCampaign);
-    }
-
-    function getPreCampaignRows() {
-      return dataRows.filter(r => r.isPreCampaign && r.weeklyBudget !== null);
     }
 
     function isCurrentWeek(weekStartRow) {
@@ -919,7 +939,7 @@
 
     function renderWeeklyTable() {
       const weekRows = getWeekRows();
-      const preCampaignRows = getPreCampaignRows();
+      const preCampaignRows = getPreCampaignRows().filter(r => r.weeklyBudget !== null);
       const expectedPct = getExpectedPct();
 
       if (weekRows.length === 0 && preCampaignRows.length === 0) {
