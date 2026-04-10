@@ -607,7 +607,7 @@
       try {
         const authHeader = { Authorization: 'Bearer ' + accessToken };
         const [mainRes, totalsRes] = await Promise.all([
-          fetch(SHEETS_BASE + '/values/Tracker!A3:T80', { headers: authHeader }),
+          fetch(SHEETS_BASE + '/values/Tracker!A2:T80', { headers: authHeader }),
           fetch(SHEETS_BASE + '/values/Tracker!M82:T82', { headers: authHeader }),
         ]);
         if (!mainRes.ok) {
@@ -651,7 +651,7 @@
         const parsedDate = parseSheetDate(rawDate);
         const isPreCampaign = !parsedDate || isNaN(parsedDate.getTime()) || parsedDate < CAMPAIGN_START;
         return {
-          sheetRowNum: i + 3,
+          sheetRowNum: i + 2,
           date: isPreCampaign ? null : parsedDate,
           preLabel: isPreCampaign ? rawDate : null,
           isPreCampaign,
