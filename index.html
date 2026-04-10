@@ -607,7 +607,7 @@
         const authHeader = { Authorization: 'Bearer ' + accessToken };
         const [mainRes, totalsRes] = await Promise.all([
           fetch(SHEETS_BASE + '/values/Tracker!A2:T80', { headers: authHeader }),
-          fetch(SHEETS_BASE + '/values/Tracker!M82:T82', { headers: authHeader }),
+          fetch(SHEETS_BASE + '/values/Tracker!A82:T82', { headers: authHeader }),
         ]);
         if (!mainRes.ok) {
           if (mainRes.status === 403) throw new Error('403');
@@ -673,12 +673,18 @@
         const t = totalsValues[0];
         const get = (idx) => t[idx] !== undefined ? t[idx] : '';
         totalsRow = {
-          dailyTotalBudget: parseFloatOrZero(get(0)),
-          dailyActual: parseFloatOrZero(get(1)),
-          runningBudget: parseFloatOrZero(get(2)),
-          weeklyBudget: parseFloat2(get(4)),
-          weeklyActual: parseFloat2(get(5)),
-          weeklyDiff: parseFloat2(get(7)),
+          gDisplayBudget:   parseFloatOrZero(get(1)),   // B82
+          gSearchBudget:    parseFloatOrZero(get(2)),   // C82
+          gActual:          parseFloatOrZero(get(3)),   // D82
+          metaActual:       parseFloatOrZero(get(4)),   // E82
+          metaDailyBudget:  parseFloatOrZero(get(7)),   // H82
+          dspActual:        parseFloatOrZero(get(11)),  // L82
+          dailyTotalBudget: parseFloatOrZero(get(12)),  // M82
+          dailyActual:      parseFloatOrZero(get(13)),  // N82
+          runningBudget:    parseFloatOrZero(get(14)),  // O82
+          weeklyBudget:     parseFloat2(get(16)),       // Q82
+          weeklyActual:     parseFloat2(get(17)),       // R82
+          weeklyDiff:       parseFloat2(get(19)),       // T82
         };
       }
     }
@@ -690,55 +696,43 @@
 
     // ── Computed Values ──
     function getTotalBudget() {
-      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.dailyTotalBudget));
+      return totalsRow ? totalsRow.dailyTotalBudget : 0;
     }
 
     function getSpentToDate() {
-      return sum(dataRows
-        .filter(r => !r.isPreCampaign && (r.gActual !== null || r.metaActual !== null))
-        .map(r => r.dailyActual));
+      return totalsRow ? totalsRow.dailyActual : 0;
     }
 
     function getGoogleActual() {
-      let last = 0;
-      for (const r of dataRows) {
-        if (r.gActual !== null) last = r.gActual;
-      }
-      return last;
+      return totalsRow ? totalsRow.gActual : 0;
     }
 
     function getDspActual() {
-      let last = 0;
-      for (const r of dataRows) {
-        if (r.dspActual !== null) last = r.dspActual;
-      }
-      return last;
+      return totalsRow ? totalsRow.dspActual : 0;
     }
 
     function getMetaActual() {
-      let last = 0;
-      for (const r of dataRows) {
-        if (r.metaActual !== null) last = r.metaActual;
-      }
-      return last;
+      return totalsRow ? totalsRow.metaActual : 0;
     }
 
     function getGDisplayBudget() {
-      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.gDisplayBudget));
+      return totalsRow ? totalsRow.gDisplayBudget : 0;
     }
 
     function getGSearchBudget() {
-      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.gSearchBudget));
+      return totalsRow ? totalsRow.gSearchBudget : 0;
     }
 
     function getMetaBudget() {
-      return sum(dataRows.filter(r => !r.isPreCampaign).map(r => r.metaDailyBudget));
+      return totalsRow ? totalsRow.metaDailyBudget : 0;
     }
 
     function getDspBudget() {
-      return sum(dataRows.filter(r => !r.isPreCampaign).map(r =>
-        r.dailyTotalBudget - r.gDisplayBudget - r.gSearchBudget - r.metaDailyBudget
-      ));
+      if (!totalsRow) return 0;
+      return totalsRow.dailyTotalBudget
+        - totalsRow.gDisplayBudget
+        - totalsRow.gSearchBudget
+        - totalsRow.metaDailyBudget;
     }
 
     function getExpectedPct() {
