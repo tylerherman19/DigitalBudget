@@ -649,7 +649,7 @@
         const get = (idx) => row[idx] !== undefined ? row[idx] : '';
         const rawDate = get(0);
         const parsedDate = parseSheetDate(rawDate);
-        const isPreCampaign = !parsedDate || isNaN(parsedDate.getTime());
+        const isPreCampaign = !parsedDate || isNaN(parsedDate.getTime()) || parsedDate < CAMPAIGN_START;
         return {
           sheetRowNum: i + 3,
           date: isPreCampaign ? null : parsedDate,
